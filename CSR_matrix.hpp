@@ -62,7 +62,6 @@ CSR_matrix::CSR_matrix(CSR_matrix& cpy): values(cpy.values), col(cpy.col), row(c
 CSR_matrix::CSR_matrix(std::vector<double> v, std::vector<int> c, std::vector<int> r): values(v), col(c), row(r) {}
 
 
-//this constructor is still buggy
 CSR_matrix::CSR_matrix(const std::string& filename) {
 
     //parse the comment lines
@@ -88,7 +87,8 @@ CSR_matrix::CSR_matrix(const std::string& filename) {
     std::vector<std::vector<double>> out(num_row, std::vector<double>(num_col, 0.0));
 
     //popualte
-    int in_v, in_c, in_r;
+    int in_c, in_r;
+    double in_v;
     while (file >> in_r >> in_c >> in_v){
         // std::cout << "\nitem\n";
         out[in_r-1][in_c-1] = in_v;
