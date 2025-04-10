@@ -2,6 +2,10 @@
 
 #include <vector>
 #include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <sstream>
+#include <stdexcept>
 
 class CSR_matrix {
 private:
@@ -16,6 +20,8 @@ public:
     CSR_matrix(std::vector<std::vector<double>>& matrix);
     CSR_matrix(CSR_matrix& cpy);
     CSR_matrix(std::vector<double> v, std::vector<int> c, std::vector<int> r);
+    CSR_matrix(const std::string& filename);
+
     ~CSR_matrix();
 
     std::vector<std::vector<double>> toMatrix();
@@ -54,6 +60,49 @@ CSR_matrix::CSR_matrix(std::vector<std::vector<double>>& matrix) {
 CSR_matrix::CSR_matrix(CSR_matrix& cpy): values(cpy.values), col(cpy.col), row(cpy.row) {}
 
 CSR_matrix::CSR_matrix(std::vector<double> v, std::vector<int> c, std::vector<int> r): values(v), col(c), row(r) {}
+
+
+//this constructor is still buggy
+CSR_matrix::CSR_matrix(const std::string& filename) {
+
+    //parse the comment lines
+    std::ifstream file(filename);
+    std::string line;
+
+    std::getline(file, line);
+    while (line[0] == '%'){
+        std::getline(file, line);
+    }
+
+    //now string should contain dimension lines
+    int num_row;
+    int num_col;
+    int num_entries;
+
+    std::istringstream iss(line);
+    iss >> num_row >> num_col >> num_entries;
+
+    // std::cout << num_row << " " << num_col << "\n";
+    
+    //make the matrix with zeros
+    std::vector<std::vector<double>> out(num_row, std::vector<double>(num_col, 0.0));
+
+    //popualte
+    int in_v, in_c, in_r;
+    while (file >> in_r >> in_c >> in_v){
+        // std::cout << "\nitem\n";
+        out[in_r-1][in_c-1] = in_v;
+    }
+
+    // for (const auto& row : out) {
+    //     for (const auto& val : row) {
+    //         std::cout << val << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+    *this = CSR_matrix(out);    
+}
 
 CSR_matrix::~CSR_matrix() = default;
 
@@ -190,3 +239,4 @@ void CSR_matrix::print() {
     std::cout << ")" << std::endl;
     
 }
+
