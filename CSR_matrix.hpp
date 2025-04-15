@@ -39,14 +39,16 @@ CSR_matrix::CSR_matrix() = default;
 
 CSR_matrix::CSR_matrix(std::vector<std::vector<double>>& matrix) {
 
-    int len = matrix.size();
-    int len2 = matrix[0].size();
+    int rowLength = matrix.size();
+    int colLength = matrix[0].size();
 
-    row.resize(len+1, 0);
-
-    for (int i = 0; i < len; i++){
+    row.resize(rowLength+1, 0);
+    // could look into std::vector reserve -- prevents reallocations until reserve is filled up
+    // could set reserve into estimate for number of non-empty values (maybe rowLength*colLength*percentFilled)
+    
+    for (int i = 0; i < rowLength; i++){
         row[i] = values.size();
-        for (int j = 0; j < len2; j++){
+        for (int j = 0; j < colLength; j++){
             if (matrix[i][j] != 0) {
                 values.push_back(matrix[i][j]);
                 col.push_back(j);
@@ -54,7 +56,7 @@ CSR_matrix::CSR_matrix(std::vector<std::vector<double>>& matrix) {
         }   
     }
 
-    row[len] = values.size();
+    row[rowLength] = values.size();
 }
 
 CSR_matrix::CSR_matrix(CSR_matrix& cpy): values(cpy.values), col(cpy.col), row(cpy.row) {}
