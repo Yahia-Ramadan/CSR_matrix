@@ -30,6 +30,7 @@ public:
 
     std::vector<std::vector<double>> toMatrix();
     std::vector<double> vectorMultiply(std::vector<double>& vec);
+    std::vector<double> SpMV(std::vector<double>& y, std::vector<double>& x, double a, double b) const;
     CSR_matrix matrixMultiply(CSR_matrix& other);
     void print();
     
@@ -197,7 +198,25 @@ std::vector<std::vector<double>> CSR_matrix::toMatrix(){
     return out;
 }
 
-//perform SpMV
+//perform SpMV of form y = α · Ax + β · y
+//where y is the output vector, α and β are scalars, x is the dense vector, and A is the sparse matrix 
+std::vector<double> CSR_matrix::SpMV(std::vector<double>& y, std::vector<double>& x, double a, double b) const {
+    
+    std::vector<double> out(y.size(), 0.0);
+
+    for (int i = 0; i < row.size() - 1; i++){
+        double rowSum = 0.0;
+        //calculate Ax
+        for (int j = row[i]; j < row[i + 1]; j++) {
+            rowSum += (values[j] * x[col[j]]);
+        }
+        
+        //add a * Ax + b * y to the output vector
+        out[i] = a * rowSum + b * y[i];
+    }
+
+    return out;
+}
 std::vector<double> CSR_matrix::vectorMultiply(std::vector<double>& vec) {
 
     std::vector<double> out(row.size() - 1, 0.0);
