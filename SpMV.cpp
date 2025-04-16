@@ -43,6 +43,7 @@ int main(){
     float max_value = 100.0;
 
     std::vector<double> vec(17758, 0.0);
+    std::vector<double> res(17758, 0.0);
     for (size_t i = 0; i < 17758; i++)
     {
         vec.at(i) = generate_random_float(min_value, max_value);
@@ -52,7 +53,7 @@ int main(){
  
     auto start1 = std::chrono::high_resolution_clock::now();
     std::vector<double> out;
-    out = a.vectorMultiply(vec);
+    out = a.SpMV(res, vec, 2.5, -0.5);
 
     auto end1 = std::chrono::high_resolution_clock::now();
     auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end1 - start1);
