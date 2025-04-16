@@ -25,8 +25,10 @@ int main() {
     CSR_matrix a("MM_matrix_files/jgl009.mtx");
     CSR_matrix b("MM_matrix_files/jgl009.mtx");
 
-    CSR_matrix out = a.matrixMultiply(b);
-    out.print();
+    a.print();
+
+    // CSR_matrix out = a.matrixMultiply(b);
+    // out.print();
 
     return 0;
 }
