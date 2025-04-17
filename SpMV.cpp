@@ -1,5 +1,7 @@
 #include "CSR_matrix.hpp"
 #include "mkl_spblas.h"
+#include <mkl.h>
+#include <mkl_spblas.h>
 
 #include <chrono>
 #include <iostream>
