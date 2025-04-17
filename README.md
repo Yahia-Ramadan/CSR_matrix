@@ -2,6 +2,8 @@ The files contained in MM_matrix_files are from NIST and available at https://ma
 
 To run, first ensure you have the Linux version of Intel's OpenMKL (available here: https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-download.html) installed and do the following:
 
+Note: mkl_sparse and mkl_spblas are different.
+
 ```bash
 # Set up environment
 source /opt/intel/oneapi/setvars.sh
@@ -11,3 +13,4 @@ make
 
 # Run the example
 ./SpMV
+

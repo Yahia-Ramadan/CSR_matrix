@@ -219,6 +219,7 @@ std::vector<double> CSR_matrix::SpMV(std::vector<double>& y, std::vector<double>
 
     return out;
 }
+
 std::vector<double> CSR_matrix::vectorMultiply(std::vector<double>& vec) {
 
     std::vector<double> out(row.size() - 1, 0.0);
@@ -227,7 +228,6 @@ std::vector<double> CSR_matrix::vectorMultiply(std::vector<double>& vec) {
             out[i-1] += (values[j] * vec[col[j]]);
         }
     }
-    
     return out;
 }
 
