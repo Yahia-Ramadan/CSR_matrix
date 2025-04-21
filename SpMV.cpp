@@ -6,6 +6,9 @@
 #include <random>
 #include <limits>
 
+#define SIZE 5154859
+
+
 float generate_random_float(float min, float max) {
     // Seed the random number generator
     std::random_device rd;
@@ -31,20 +34,16 @@ int main(){
 
 
     //Load matrix
-    auto start = std::chrono::high_resolution_clock::now();
-    CSR_matrix a("MM_matrix_files/memplus.mtx");
+    CSR_matrix a("MM_matrix_files/cage15.mtx");
     
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    std::cout << "\nThis library's time to load matrix: " << duration.count() << " ms" << std::endl;
 
-    //Generate random dense vector with size 17758
+    //Generate random dense vector with size SIZE
     float min_value = -100.0;
     float max_value = 100.0;
 
-    std::vector<double> vec(17758, 0.0);
-    std::vector<double> res(17758, 0.0);
-    for (size_t i = 0; i < 17758; i++)
+    std::vector<double> vec(SIZE, 0.0);
+    std::vector<double> res(SIZE, 0.0);
+    for (size_t i = 0; i < SIZE; i++)
     {
         vec.at(i) = generate_random_float(min_value, max_value);
     }
@@ -76,8 +75,8 @@ int main(){
     std::vector<int> col_index   = a.getCol();
     std::vector<int> row_pointer = a.getRow();
 
-    int m = 17758;  // rows
-    int n = 17758;  // columns
+    int m = SIZE;  // rows
+    int n = SIZE;  // columns
  
     // Create sparse matrix handle
     sparse_matrix_t A;
@@ -122,7 +121,7 @@ int main(){
 
     status = mkl_sparse_d_mv(
         SPARSE_OPERATION_NON_TRANSPOSE,
-        1.0, A,
+        2.5, A,
         descr,
         x.data(),
         0.0, y.data()

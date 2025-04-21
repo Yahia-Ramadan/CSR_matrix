@@ -1,0 +1,15 @@
+Matrix,Rows,Cols,NNZ,CustomAvgTimeMS,MKLAvgTimeMS
+MM_matrix_files/atmosmodd.mtx,1270432,1270432,0,8.70997,2.79448
+MM_matrix_files/barrier2-12.mtx,115625,115625,0,3.89691,0.866246
+MM_matrix_files/cage15.mtx,5154859,5154859,0,96.0923,28.5439
+MM_matrix_files/circuit5M.mtx,5558326,5558326,0,66.9816,35.6547
+MM_matrix_files/Freescale1.mtx,3428755,3428755,0,23.8056,8.31063
+MM_matrix_files/FullChip.mtx,2987012,2987012,0,37.7729,14.6786
+MM_matrix_files/HV15R.mtx,2017169,2017169,0,273.591,60.3734
+MM_matrix_files/jgl009.mtx,9,9,0,6.24e-05,0.00147364
+MM_matrix_files/memplus.mtx,17758,17758,0,0.133402,0.0335724
+MM_matrix_files/rajat31.mtx,4690002,4690002,0,25.9221,7.36712
+MM_matrix_files/stokes.mtx,11449533,11449533,0,326.145,106.769
+MM_matrix_files/vas_stokes_4M.mtx,4382246,4382246,0,125.523,37.4943
+MM_matrix_files/webbase-1M.mtx,1000005,1000005,0,5.71623,1.71271
+MM_matrix_files/west0067.mtx,67,67,0,0.000354212,0.00214873
