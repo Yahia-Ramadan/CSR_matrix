@@ -6,8 +6,9 @@
 #include <algorithm>
 #include <sstream>
 #include <stdexcept>
-
 #include <omp.h>
+#include <queue>
+
 
 class CSR_matrix {
 private:
@@ -19,11 +20,8 @@ private:
     int n_cols;
     int n_rows;
     int nnz;
-
-public:
-    int getNCols() const { return n_cols; }
-    int getNRows() const { return n_rows; }
-    int getNNZ() const { return nnz; }
+    
+public:    
 
     CSR_matrix();
     CSR_matrix(std::vector<std::vector<double>>& matrix);
@@ -34,18 +32,24 @@ public:
     ~CSR_matrix();
 
     std::vector<std::vector<double>> toMatrix();
-    std::vector<double> vectorMultiply(std::vector<double>& vec);
+    // std::vector<double> vectorMultiply(std::vector<double>& vec);
     std::vector<double> SpMV(std::vector<double>& y, std::vector<double>& x, double a, double b, int numthreads) const;
-    CSR_matrix matrixMultiply(CSR_matrix& other);
+    // CSR_matrix matrixMultiply(CSR_matrix& other);
+    void CSR_matrix::tuple_mergeSorted(std::vector<std::vector<std::pair<int, double>>>);
+
     void print();
     
-    double dotHelper( CSR_matrix& other, int idx1, int idx);
-    CSR_matrix toCSC();
+    // double dotHelper( CSR_matrix& other, int idx1, int idx)
+    // CSR_matrix toCSC();
 
     // Getters
     const std::vector<double>& getValues() const { return values; }
     const std::vector<int>& getCol() const { return col; }
     const std::vector<int>& getRow() const { return row; }
+    int getNCols() const { return n_cols; }
+    int getNRows() const { return n_rows; }
+    int getNNZ() const { return nnz; }
+    
 };
 
 CSR_matrix::CSR_matrix() = default;
@@ -294,95 +298,141 @@ std::vector<double> CSR_matrix::SpMV(std::vector<double>& y, std::vector<double>
     return out;
 }
 
+//could try to use struct instead of tuple
+void CSR_matrix::tuple_mergeSorted(std::vector<std::vector<std::pair<int, double>>> vecs){
 
-std::vector<double> CSR_matrix::vectorMultiply(std::vector<double>& vec) {
+    using triple = std::tuple<std::pair<int, double>, int, int>;
 
-    std::vector<double> out(row.size() - 1, 0.0);
-    for (int i = 1; i < row.size(); i++){
-        for (int j = row[i-1]; j < row[i]; j++){
-            out[i-1] += (values[j] * vec[col[j]]);
+    auto comparator = [](const triple& a, const triple& b){
+        return std::get<0>(a).first > std::get<0>(b).first;
+    };
+
+    std::vector<triple> temp(vecs.size());
+
+    for (size_t i = 0; i < vecs.size(); i++){
+        temp.at(i) = {vecs[i][0], i, 0};
+    }
+
+    std::priority_queue<triple, std::vector<triple>, decltype(comparator)> pq(comparator, std::move(temp));
+
+    std::vector<std::pair<int, double>> res;
+
+    while (pq.size() > 0)
+    {
+        triple element = pq.top();
+        pq.pop();
+
+        std::pair<int, double> val = std::get<0>(element);
+        int global_i = std::get<1>(element);
+        int vector_i = std::get<2>(element);
+
+        vector_i++;
+
+        if (vector_i < vecs[global_i].size()){
+            pq.push({vecs[global_i][vector_i], global_i, vector_i});
+        }
+
+        if (res.size() == 0 || res.at(res.size()-1).first != val.first){
+            res.emplace_back(val);
+        }
+        else{
+            res[res.size()-1].second += val.second;
         }
     }
+}
+
+
+// std::vector<double> CSR_matrix::vectorMultiply(std::vector<double>& vec) {
+
+//     std::vector<double> out(row.size() - 1, 0.0);
+//     for (int i = 1; i < row.size(); i++){
+//         for (int j = row[i-1]; j < row[i]; j++){
+//             out[i-1] += (values[j] * vec[col[j]]);
+//         }
+//     }
     
-    return out;
-}
+//     return out;
+// }
 
-CSR_matrix CSR_matrix::matrixMultiply(CSR_matrix& other) {
 
-    CSR_matrix csc = other.toCSC();
 
-    std::vector<double> out_v;
-    std::vector<int> out_c;
-    std::vector<int> out_r(this->row.size(), 0);
 
-    for (int i = 0; i < this->row.size()-1; i++){
-        for (int j = 0; j < csc.col.size()-1; j++){
-            double res = dotHelper(csc, i, j);
-            if (res != 0.0){
-                out_v.push_back(res);
-                out_c.push_back(j);
-                out_r[i+1]++;
-            }
-        }
-    }
+// CSR_matrix CSR_matrix::matrixMultiply(CSR_matrix& other) {
 
-    for (int i = 0; i < out_r.size()-1; i++){
-        out_r[i+1] += out_r[i];
-    }
+//     CSR_matrix csc = other.toCSC();
+
+//     std::vector<double> out_v;
+//     std::vector<int> out_c;
+//     std::vector<int> out_r(this->row.size(), 0);
+
+//     for (int i = 0; i < this->row.size()-1; i++){
+//         for (int j = 0; j < csc.col.size()-1; j++){
+//             double res = dotHelper(csc, i, j);
+//             if (res != 0.0){
+//                 out_v.push_back(res);
+//                 out_c.push_back(j);
+//                 out_r[i+1]++;
+//             }
+//         }
+//     }
+
+//     for (int i = 0; i < out_r.size()-1; i++){
+//         out_r[i+1] += out_r[i];
+//     }
     
-    return CSR_matrix(out_v, out_c, out_r);
-}
+//     return CSR_matrix(out_v, out_c, out_r);
+// }
 
 
-//creates a csc representation from a csr representin, with col indicies in col, row values in row
-CSR_matrix CSR_matrix::toCSC(){
+// //creates a csc representation from a csr representin, with col indicies in col, row values in row
+// CSR_matrix CSR_matrix::toCSC(){
 
-    //get max number of cols
-    int num_col = 0;
-    for (int c: this->col) {if (c + 1 > num_col) {num_col = c + 1;}}
+//     //get max number of cols
+//     int num_col = 0;
+//     for (int c: this->col) {if (c + 1 > num_col) {num_col = c + 1;}}
 
-    //initialze vectors for csc
-    std::vector<double> v(this->values.size(), 0.0);
-    std::vector<int> r(this->values.size(), 0);
-    std::vector<int> c(num_col+1, 0);
+//     //initialze vectors for csc
+//     std::vector<double> v(this->values.size(), 0.0);
+//     std::vector<int> r(this->values.size(), 0);
+//     std::vector<int> c(num_col+1, 0);
 
-    //first get counts by col and then do sum
-    for (int i = 0; i < this->col.size(); i++){c[this->col[i]+1]++;}
-    for (int i = 0; i < c.size()-1; i++){c[i+1] += c[i];}
+//     //first get counts by col and then do sum
+//     for (int i = 0; i < this->col.size(); i++){c[this->col[i]+1]++;}
+//     for (int i = 0; i < c.size()-1; i++){c[i+1] += c[i];}
 
-    std::vector<int> counts = c;
-    for (int i = 0; i < this->row.size()-1; i++){
-        for (int j = this->row[i]; j < this->row[i+1]; j++){
+//     std::vector<int> counts = c;
+//     for (int i = 0; i < this->row.size()-1; i++){
+//         for (int j = this->row[i]; j < this->row[i+1]; j++){
 
-            int col = this->col[j];
-            int ptr = counts[col]++;
+//             int col = this->col[j];
+//             int ptr = counts[col]++;
 
-            v[ptr] = this->values[j];
-            r[ptr] = i;
-        }
-    }
+//             v[ptr] = this->values[j];
+//             r[ptr] = i;
+//         }
+//     }
     
-    return CSR_matrix(v, c, r);
-}
+//     return CSR_matrix(v, c, r);
+// }
 
 
-double CSR_matrix::dotHelper(CSR_matrix& other, int idx1, int idx2) {
+// double CSR_matrix::dotHelper(CSR_matrix& other, int idx1, int idx2) {
 
-    int i = this->row[idx1];
-    int j = other.col[idx2];
-    double res = 0.0;    
+//     int i = this->row[idx1];
+//     int j = other.col[idx2];
+//     double res = 0.0;    
 
-    while (i < this->row[idx1+1] && j < other.col[idx2+1]){
-        if (this->col[i] == other.row[j]){
-            res += this->values[i] * other.values[j];
-            i++; j++;
-        }
-        else if (this->col[i] < other.row[j]){i++;}
-        else{j++;}
-    }
+//     while (i < this->row[idx1+1] && j < other.col[idx2+1]){
+//         if (this->col[i] == other.row[j]){
+//             res += this->values[i] * other.values[j];
+//             i++; j++;
+//         }
+//         else if (this->col[i] < other.row[j]){i++;}
+//         else{j++;}
+//     }
 
-    return res;
-}
+//     return res;
+// }
 
 
 void CSR_matrix::print() {
