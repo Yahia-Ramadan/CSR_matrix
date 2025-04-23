@@ -23,3 +23,15 @@ def merge_sorted(lists: [[(int, float)]]):
             heapq.heappush(pq, (lists[id][list_i], list_i, id))
         
     return res
+
+
+
+v1 = [4, 1, 5, 7]
+c1 = [1, 2, 3, 7]
+#i dont need the tuples, i just need an index
+
+v2 = [1, 1, 9, 9]
+c2 = [0, 1, 7, 8]
+
+v3 = [4, 5, 9]
+c3 = [4, 5, 6]
