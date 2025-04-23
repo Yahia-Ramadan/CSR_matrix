@@ -7,6 +7,8 @@
 #include <sstream>
 #include <stdexcept>
 
+#include <omp.h>
+
 class CSR_matrix {
 private:
     std::vector<double> values;
@@ -14,11 +16,14 @@ private:
     std::vector<int> row;
 
     //TODO: update constructors to support the new values;
-    // int n_cols;
-    // int n_rows;
-    // int n_nonzero;
+    int n_cols;
+    int n_rows;
+    int nnz;
 
 public:
+    int getNCols() const { return n_cols; }
+    int getNRows() const { return n_rows; }
+    int getNNZ() const { return nnz; }
 
     CSR_matrix();
     CSR_matrix(std::vector<std::vector<double>>& matrix);
@@ -30,7 +35,7 @@ public:
 
     std::vector<std::vector<double>> toMatrix();
     std::vector<double> vectorMultiply(std::vector<double>& vec);
-    std::vector<double> SpMV(std::vector<double>& y, std::vector<double>& x, double a, double b) const;
+    std::vector<double> SpMV(std::vector<double>& y, std::vector<double>& x, double a, double b, int numthreads) const;
     CSR_matrix matrixMultiply(CSR_matrix& other);
     void print();
     
@@ -65,119 +70,188 @@ CSR_matrix::CSR_matrix(std::vector<std::vector<double>>& matrix) {
         }   
     }
 
-    row[rowLength] = values.size();
+    row[len] = values.size();
+
+
+    //TODO: update these values properly
+    n_cols = 0;
+    n_rows = 0;
+    nnz = 0;
+    
 }
 
-CSR_matrix::CSR_matrix(CSR_matrix& cpy): values(cpy.values), col(cpy.col), row(cpy.row) {}
+CSR_matrix::CSR_matrix(CSR_matrix& cpy): values(cpy.values), col(cpy.col), row(cpy.row), n_cols(cpy.n_cols), n_rows(cpy.n_rows), nnz(cpy.nnz) {}
 
-CSR_matrix::CSR_matrix(std::vector<double> v, std::vector<int> c, std::vector<int> r): values(v), col(c), row(r) {}
+CSR_matrix::CSR_matrix(std::vector<double> v, std::vector<int> c, std::vector<int> r): values(v), col(c), row(r) {
+    
+    //TODO: update these values properly
+    n_cols = 0;
+    n_rows = 0;
+    nnz = 0;
+}
 
 
 CSR_matrix::CSR_matrix(const std::string& filename){
 
-    //load file
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        std::cerr << "Error: Could not open the file " << filename << "\n";
-        return;
-    }
+    //support special filename, ends in .mtxtxt
+    //first row is: num_col num_row nnz
+    //then the next nnz rows represent the val vector, then col vector, then the row+1 represnt row ptr
 
-    //first parse header line
-
-    //can add support for pattern and complex later, as well as symmetries other than general
-    //must be matrix, coordinate, real, general
-
-    std::string line;
-    std::getline(file, line);
-    std::stringstream header(line);
-    try {
-        std::string curr;
-        
-        //skip %%MatrixMarket portion
-        header >> curr;
-
-        //parse rest of line
-        header >> curr;
-        if (curr != "matrix") {
-            std::cerr << "Error: First line of matrix file must be: /%/%MatrixMarket matrix coordinate real general\n";
+    if (filename.substr(filename.find_last_of(".") + 1) == "mtxtxt")
+    {
+        //load file
+        std::ifstream file(filename);
+        if (!file.is_open()) {
+            std::cerr << "Error: Could not open the file " << filename << "\n";
             return;
         }
-        header >> curr;
-        if (curr != "coordinate") {
-            std::cerr << "Error: First line of matrix file must be: /%/%MatrixMarket matrix coordinate real general\n";
-            return;
-        }
-        header >> curr;
-        if (curr != "real") {
-            std::cerr << "Error: First line of matrix file must be: /%/%MatrixMarket matrix coordinate real general\n";
-            return;
-        }
-        header >> curr;
-        if (curr != "general") {
-            std::cerr << "Error: First line of matrix file must be: /%/%MatrixMarket matrix coordinate real general\n";
-            return;
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Error while parsing header: " << e.what() << '\n';
-    }
 
-
-    //skip comments
-    std::getline(file, line);
-    while (line[0] == '%') {
+        std::string line;
         std::getline(file, line);
+        std::stringstream str(line);
+        str >> n_cols >> n_rows >> nnz;
+
+        double d;
+        int in;
+
+        values.resize(nnz);
+        col.resize(nnz);
+        row.resize(n_rows+1);
+
+        for (size_t i = 0; i < nnz; ++i)
+        {
+            file >> d;
+            values.at(i) = d;
+        }
+        
+        for (size_t i = 0; i < nnz; ++i)
+        {
+            file >> in;
+            col.at(i) = in;
+        }
+
+        for (size_t i = 0; i < n_rows+1; ++i)
+        {
+            file >> in;
+            row.at(i) = in;
+        }
+        file.close();
     }
+    else /* .mtx format */ {
 
-    //parse dimensions
-    int rows, cols, nnz;
-    std::istringstream metadata(line);
-    metadata >> rows >> cols >> nnz;
+        //load file
+        std::ifstream file(filename);
+        if (!file.is_open()) {
+            std::cerr << "Error: Could not open the file " << filename << "\n";
+            return;
+        }
 
-    //temp for COO
-    std::vector<int> row_indices(nnz), col_indices(nnz);
-    std::vector<double> values(nnz);
+        //first parse header line
 
-    //read in COO
-    for (int i = 0; i < nnz; ++i) {
-        int row, col;
-        double val;
-        file >> row >> col >> val;
+        //can add support for pattern and complex later, as well as symmetries other than general
+        //must be matrix, coordinate, real, general
 
-        //converts to 0 based index
-        row_indices[i] = row - 1;
-        col_indices[i] = col - 1;
-        values[i] = val;
+        std::string line;
+        std::getline(file, line);
+        std::stringstream header(line);
+        try {
+            std::string curr;
+            
+            //skip %%MatrixMarket portion
+            header >> curr;
+
+            //parse rest of line
+            header >> curr;
+            if (curr != "matrix") {
+                std::cerr << "Error in file " << filename << ": First line of matrix file must be: /%/%MatrixMarket matrix coordinate real general\n";
+                std::cerr << "Actual: " << curr << "\n";
+                return;
+            }
+            header >> curr;
+            if (curr != "coordinate") {
+                std::cerr << "Error in file " << filename << ": First line of matrix file must be: /%/%MatrixMarket matrix coordinate real general\n";
+                std::cerr << "Actual: " << curr << "\n";
+                return;
+            }
+            header >> curr;
+            if (curr != "real") {
+                std::cerr << "Error in file " << filename << ": First line of matrix file must be: /%/%MatrixMarket matrix coordinate real general\n";
+                std::cerr << "Actual: " << curr << "\n";
+                return;
+            }
+            header >> curr;
+            if (curr != "general") {
+                std::cerr << "Error in file " << filename << ": First line of matrix file must be: /%/%MatrixMarket matrix coordinate real general\n";
+                std::cerr << "Actual: " << curr << "\n";
+                return;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Error in file " << filename << " while parsing header: " << e.what() << '\n';
+        }
+
+
+        //skip comments
+        std::getline(file, line);
+        while (line[0] == '%') {
+            std::getline(file, line);
+        }
+
+        //parse dimensions
+        int rows, cols, nonzero;
+        std::istringstream metadata(line);
+        metadata >> rows >> cols >> nonzero;
+
+        n_cols = cols;
+        n_rows = rows;
+        nnz = nonzero;
+
+        //temp for COO
+        std::vector<int> row_indices(nnz), col_indices(nnz);
+        std::vector<double> values(nnz);
+
+        //read in COO
+        for (int i = 0; i < nnz; ++i) {
+            int row, col;
+            double val;
+            file >> row >> col >> val;
+
+            //converts to 0 based index
+            row_indices[i] = row - 1;
+            col_indices[i] = col - 1;
+            values[i] = val;
+        }
+
+
+        //initialze csr vecs
+        std::vector<int> row_ptr(rows + 1, 0);
+        std::vector<int> csr_col(nnz);
+        std::vector<double> csr_val(nnz);
+
+        //entries per row
+        for (int i = 0; i < nnz; ++i) {
+            row_ptr[row_indices[i] + 1]++;
+        }
+
+        //sum to get row
+        for (int i = 0; i < rows; ++i) {
+            row_ptr[i + 1] += row_ptr[i];
+        }
+
+        std::vector<int> offset = row_ptr;
+
+        //fill in col/val arrays
+        for (int i = 0; i < nnz; ++i) {
+            int row = row_indices[i];
+            int dest = offset[row]++;
+            csr_col[dest] = col_indices[i];
+            csr_val[dest] = values[i];
+        }
+        
+        this->values = csr_val;
+        this->col = csr_col;
+        this->row = row_ptr;
+        file.close();
     }
-
-
-    //initialze csr vecs
-    std::vector<int> row_ptr(rows + 1, 0);
-    std::vector<int> csr_col(nnz);
-    std::vector<double> csr_val(nnz);
-
-    //entries per row
-    for (int i = 0; i < nnz; ++i) {
-        row_ptr[row_indices[i] + 1]++;
-    }
-
-    //sum to get row
-    for (int i = 0; i < rows; ++i) {
-        row_ptr[i + 1] += row_ptr[i];
-    }
-
-    std::vector<int> offset = row_ptr;
-
-    //fill in col/val arrays
-    for (int i = 0; i < nnz; ++i) {
-        int row = row_indices[i];
-        int dest = offset[row]++;
-        csr_col[dest] = col_indices[i];
-        csr_val[dest] = values[i];
-    }
-    
-    this->values = csr_val;
-    this->col = csr_col;
-    this->row = row_ptr;    
 }
 
 CSR_matrix::~CSR_matrix() = default;
@@ -202,15 +276,17 @@ std::vector<std::vector<double>> CSR_matrix::toMatrix(){
 
 //perform SpMV of form y = α · Ax + β · y
 //where y is the output vector, α and β are scalars, x is the dense vector, and A is the sparse matrix 
-std::vector<double> CSR_matrix::SpMV(std::vector<double>& y, std::vector<double>& x, double a, double b) const {
+std::vector<double> CSR_matrix::SpMV(std::vector<double>& y, std::vector<double>& x, double a, double b, int numthreads) const {
     
     std::vector<double> out(y.size(), 0.0);
 
-    for (int i = 0; i < row.size() - 1; i++){
+    #pragma omp parallel for num_threads(numthreads)
+    for (int i = 0; i < n_rows; i++){
         double rowSum = 0.0;
         //calculate Ax
+        #pragma omp simd reduction(+:rowSum)
         for (int j = row[i]; j < row[i + 1]; j++) {
-            rowSum += (values[j] * x[col[j]]);
+            rowSum += values[j] * x[col[j]];
         }
         
         //add a * Ax + b * y to the output vector
@@ -219,6 +295,7 @@ std::vector<double> CSR_matrix::SpMV(std::vector<double>& y, std::vector<double>
 
     return out;
 }
+
 
 std::vector<double> CSR_matrix::vectorMultiply(std::vector<double>& vec) {
 
