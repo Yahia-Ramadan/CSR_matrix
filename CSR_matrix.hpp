@@ -74,7 +74,7 @@ CSR_matrix::CSR_matrix(std::vector<std::vector<double>>& matrix) {
         }   
     }
 
-    row[len] = values.size();
+    row[rowLength] = values.size();
 
 
     //TODO: update these values properly
