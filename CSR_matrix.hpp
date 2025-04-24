@@ -20,7 +20,27 @@ private:
     int n_cols;
     int n_rows;
     int nnz;
-    
+
+    //private structs used for merge list step of SpGEMM
+    struct SpGEMM_mergelists_in{
+        int* col;         // col.data()
+        double* val;      // val.data()
+        unsigned int idx; // 0
+        int len;          // col.size()
+        double scalar;
+
+        //operator overload for pq formation
+        bool operator>(const SpGEMM_mergelists_in& other) const{
+            return col[idx] > other.col[other.idx];
+        }
+    };
+
+    //vector of these pairs is col and val vectors of the new row
+    struct SpGEMM_mergelists_out{
+        int col;
+        double val;
+    };
+
 public:    
 
     CSR_matrix();
@@ -35,7 +55,9 @@ public:
     // std::vector<double> vectorMultiply(std::vector<double>& vec);
     std::vector<double> SpMV(std::vector<double>& y, std::vector<double>& x, double a, double b, int numthreads) const;
     // CSR_matrix matrixMultiply(CSR_matrix& other);
-    void CSR_matrix::tuple_mergeSorted(std::vector<std::vector<std::pair<int, double>>>);
+    std::vector<std::pair<int, double>> tuple_mergeSorted(std::vector<std::vector<std::pair<int, double>>>);
+    std::vector<SpGEMM_mergelists_out> addr_mergeSorted(std::vector<SpGEMM_mergelists_in> vecs);
+    CSR_matrix SpGEMM(CSR_matrix& B);
 
     void print();
     
@@ -299,7 +321,7 @@ std::vector<double> CSR_matrix::SpMV(std::vector<double>& y, std::vector<double>
 }
 
 //could try to use struct instead of tuple
-void CSR_matrix::tuple_mergeSorted(std::vector<std::vector<std::pair<int, double>>> vecs){
+std::vector<std::pair<int, double>> CSR_matrix::tuple_mergeSorted(std::vector<std::vector<std::pair<int, double>>> vecs){
 
     using triple = std::tuple<std::pair<int, double>, int, int>;
 
@@ -315,9 +337,9 @@ void CSR_matrix::tuple_mergeSorted(std::vector<std::vector<std::pair<int, double
 
     std::priority_queue<triple, std::vector<triple>, decltype(comparator)> pq(comparator, std::move(temp));
 
-    std::vector<std::pair<int, double>> res;
+    std::vector<std::pair<int, double>> res(vecs.size() * vecs.size());
 
-    while (pq.size() > 0)
+    while (!pq.empty())
     {
         triple element = pq.top();
         pq.pop();
@@ -332,13 +354,91 @@ void CSR_matrix::tuple_mergeSorted(std::vector<std::vector<std::pair<int, double
             pq.push({vecs[global_i][vector_i], global_i, vector_i});
         }
 
-        if (res.size() == 0 || res.at(res.size()-1).first != val.first){
+        if (res.empty() || res.at(res.size()-1).first != val.first){
             res.emplace_back(val);
         }
         else{
             res[res.size()-1].second += val.second;
         }
     }
+
+    return res;
+}
+
+
+//try to use memory addresses with structs
+//vecs is an array of pointer pairs, each indicating the start of a vector
+std::vector<CSR_matrix::SpGEMM_mergelists_out> CSR_matrix::addr_mergeSorted(std::vector<SpGEMM_mergelists_in> vecs){
+
+    std::priority_queue<SpGEMM_mergelists_in, std::vector<SpGEMM_mergelists_in>, std::greater<SpGEMM_mergelists_in>> pq(std::greater<SpGEMM_mergelists_in>(), std::move(vecs));
+    
+    std::vector<SpGEMM_mergelists_out> out;
+    out.reserve(vecs.size() * vecs.size());
+
+    while (!pq.empty())
+    {
+        SpGEMM_mergelists_in r = pq.top();
+        pq.pop();
+
+        //if the output vector is empty or if the column of current item is not already present
+        if (out.empty() || out[out.size() - 1].col != r.col[r.idx])
+        {
+            out.emplace_back(SpGEMM_mergelists_out{r.col[r.idx], r.val[r.idx] * r.scalar});
+        }
+        //if we need to add to the value of the greatest column in the output vector
+        else{
+            out[out.size() - 1].val += r.val[r.idx] * r.scalar;
+        }
+
+        ++r.idx;
+        //emplace if the size isnt more than the length of the vector
+        if (r.idx < r.len)
+        {
+            pq.emplace(SpGEMM_mergelists_in{r.col, r.val, r.idx, r.len, r.scalar});
+        }
+    }
+
+    return out;
+    
+}
+
+CSR_matrix CSR_matrix::SpGEMM(CSR_matrix& B){
+
+    std::vector<double> new_v;
+    std::vector<int> new_c;
+    std::vector<int> new_r(n_rows + 1);
+    new_v.reserve(nnz);
+    new_c.reserve(nnz);
+
+    std::vector<SpGEMM_mergelists_in> vec;
+    std::vector<SpGEMM_mergelists_out> out;
+    vec.reserve(n_cols);
+    out.reserve(n_cols);
+
+    for (size_t i = 0; i < n_rows; i++)
+    {
+        vec.clear();
+        out.clear();
+        for (size_t j = row[i]; j < row[i+1]; j++)
+        {
+            vec.emplace_back(SpGEMM_mergelists_in{&B.col[B.row[col[j]]], &B.values[B.row[col[j]]], 0, B.row[col[j] + 1 ] - B.row[col[j]], values[j]});
+        }
+        out = addr_mergeSorted(vec);
+
+        for (size_t k = 0; k < out.size(); k++)
+        {
+            SpGEMM_mergelists_out item = out[k];
+            new_c.emplace_back(item.col);
+            new_v.emplace_back(item.val);
+            ++new_r[i];
+        }
+    }
+
+    for (int i = 0; i < n_rows; ++i) {
+        new_r[i + 1] += new_r[i];
+    }
+
+    return CSR_matrix(new_v, new_c, new_r);
 }
 
 
