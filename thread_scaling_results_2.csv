@@ -1,0 +1,16 @@
+Matrix,Threads,Rows,Cols,NNZ,CustomAvgMS,MKLAvgMS
+MM_matrix_files/west0067.mtx,1,67,67,294,6.7971,1.60383
+MM_matrix_files/west0067.mtx,2,67,67,294,0.036471,0.003553
+MM_matrix_files/west0067.mtx,4,67,67,294,0.0660806,0.0119148
+MM_matrix_files/west0067.mtx,8,67,67,294,3.06839,1.57539
+MM_matrix_files/west0067.mtx,16,67,67,294,15.1372,6.04952
+MM_matrix_files/jgl009.mtx,1,9,9,50,0.699774,0.001718
+MM_matrix_files/jgl009.mtx,2,9,9,50,0.0020772,0.001051
+MM_matrix_files/jgl009.mtx,4,9,9,50,0.0042606,0.0015335
+MM_matrix_files/jgl009.mtx,8,9,9,50,0.669512,0.0027335
+MM_matrix_files/jgl009.mtx,16,9,9,50,0.130163,0.117182
+MM_matrix_files/memplus.mtx,1,17758,17758,126150,0.236081,0.218591
+MM_matrix_files/memplus.mtx,2,17758,17758,126150,0.133503,0.146262
+MM_matrix_files/memplus.mtx,4,17758,17758,126150,0.111168,0.0683353
+MM_matrix_files/memplus.mtx,8,17758,17758,126150,0.0992756,0.101516
+MM_matrix_files/memplus.mtx,16,17758,17758,126150,0.255001,0.0941667
