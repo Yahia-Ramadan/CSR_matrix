@@ -2,7 +2,7 @@ Some of the files contained in MM_matrix_files are from NIST and available at ht
 
 To run, first change the SRC in the makefile to be the file that you'd like to run and ensure you have the Linux version of Intel's OpenMKL (available here: https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl-download.html) installed and do the following:
 
-Note: mkl_sparse and mkl_spblas are different.
+To Install Eigen: sudo apt-get install libeigen3-dev
 
 ```bash
 # Set up environment

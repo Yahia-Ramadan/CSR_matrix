@@ -3,12 +3,11 @@
 #include <algorithm>
 #include <queue>
 #include <random>
+#include <unordered_map>
 
 // Assuming the sorted lists are std::vector<double>
 
 using namespace std;
-
-
 
 
 // Approach 1: Divide and Conquer (Iterative)
@@ -129,9 +128,31 @@ vector<pair<int,double>> mergeKListsMatrix(vector<vector<pair<int, double>>> lis
     return result;
 }
 
+// HashMap implementation
+// Note that pair<int, double> is column_index, value
+vector<pair<int,double>> mergeKListsHashMap(vector<vector<pair<int, double>>> lists) {
+    if(lists.empty()) {
+        return vector<pair<int,double>>{};
+    }
+
+    unordered_map<int, double> result_map; // key = column index, key value = value
+
+    for(int i=0; i<lists.size(); i++) {
+        for(int j=0; j<lists[i].size(); j++) {
+            // lists[i][col] gives pair<int, double>
+            int column_index = lists[i][j].first;
+            int value = lists[i][j].second;
+            if (result_map.find(column_index) == result_map.end()) { // does not exist in map
+                result_map[column_index] = value;
+            } else {
+                result_map[column_index] += value;
+            }
+        }
+    }
+}
 
 
-int main() {
+// int main() {
     // int k = 10; // number of lists
     // int n = 20; // max number of elements per list
     // vector<vector<double>> lists(k);
@@ -162,17 +183,17 @@ int main() {
     // expected result:   [ _ 2 10 4 6 ]  
     // ie [1 2] [2 10] [3 4] [4 6]
 
-    vector<pair<int, double>> row1 = {{1,2}, {3,4}, {4,1}};
-    vector<pair<int, double>> row2 = {{2,10}, {4,5}};
+//     vector<pair<int, double>> row1 = {{1,2}, {3,4}, {4,1}};
+//     vector<pair<int, double>> row2 = {{2,10}, {4,5}};
 
-    vector<vector<pair<int, double>>> rows = {row1, row2};
+//     vector<vector<pair<int, double>>> rows = {row1, row2};
 
-    vector<pair<int, double>> result = mergeKListsMatrix(rows);
-    cout << "Result:" << endl;
-    for(pair<int, double> val: result) {
-        cout << "[" << val.first << " " << val.second << "]" << " ";
-    }
-    cout << endl;
+//     vector<pair<int, double>> result = mergeKListsMatrix(rows);
+//     cout << "Result:" << endl;
+//     for(pair<int, double> val: result) {
+//         cout << "[" << val.first << " " << val.second << "]" << " ";
+//     }
+//     cout << endl;
 
-    return 0;
-}
+//     return 0;
+// }

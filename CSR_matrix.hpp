@@ -35,7 +35,7 @@ public:
     // std::vector<double> vectorMultiply(std::vector<double>& vec);
     std::vector<double> SpMV(std::vector<double>& y, std::vector<double>& x, double a, double b, int numthreads) const;
     // CSR_matrix matrixMultiply(CSR_matrix& other);
-    void CSR_matrix::tuple_mergeSorted(std::vector<std::vector<std::pair<int, double>>>);
+    // void CSR_matrix::tuple_mergeSorted(std::vector<std::vector<std::pair<int, double>>>);
 
     void print();
     
@@ -300,48 +300,48 @@ std::vector<double> CSR_matrix::SpMV(std::vector<double>& y, std::vector<double>
     return out;
 }
 
-//could try to use struct instead of tuple
-void CSR_matrix::tuple_mergeSorted(std::vector<std::vector<std::pair<int, double>>> vecs){
+// //could try to use struct instead of tuple
+// void CSR_matrix::tuple_mergeSorted(std::vector<std::vector<std::pair<int, double>>> vecs){
 
-    using triple = std::tuple<std::pair<int, double>, int, int>;
+//     using triple = std::tuple<std::pair<int, double>, int, int>;
 
-    auto comparator = [](const triple& a, const triple& b){
-        return std::get<0>(a).first > std::get<0>(b).first;
-    };
+//     auto comparator = [](const triple& a, const triple& b){
+//         return std::get<0>(a).first > std::get<0>(b).first;
+//     };
 
-    std::vector<triple> temp(vecs.size());
+//     std::vector<triple> temp(vecs.size());
 
-    for (size_t i = 0; i < vecs.size(); i++){
-        temp.at(i) = {vecs[i][0], i, 0};
-    }
+//     for (size_t i = 0; i < vecs.size(); i++){
+//         temp.at(i) = {vecs[i][0], i, 0};
+//     }
 
-    std::priority_queue<triple, std::vector<triple>, decltype(comparator)> pq(comparator, std::move(temp));
+//     std::priority_queue<triple, std::vector<triple>, decltype(comparator)> pq(comparator, std::move(temp));
 
-    std::vector<std::pair<int, double>> res;
+//     std::vector<std::pair<int, double>> res;
 
-    while (pq.size() > 0)
-    {
-        triple element = pq.top();
-        pq.pop();
+//     while (pq.size() > 0)
+//     {
+//         triple element = pq.top();
+//         pq.pop();
 
-        std::pair<int, double> val = std::get<0>(element);
-        int global_i = std::get<1>(element);
-        int vector_i = std::get<2>(element);
+//         std::pair<int, double> val = std::get<0>(element);
+//         int global_i = std::get<1>(element);
+//         int vector_i = std::get<2>(element);
 
-        vector_i++;
+//         vector_i++;
 
-        if (vector_i < vecs[global_i].size()){
-            pq.push({vecs[global_i][vector_i], global_i, vector_i});
-        }
+//         if (vector_i < vecs[global_i].size()){
+//             pq.push({vecs[global_i][vector_i], global_i, vector_i});
+//         }
 
-        if (res.size() == 0 || res.at(res.size()-1).first != val.first){
-            res.emplace_back(val);
-        }
-        else{
-            res[res.size()-1].second += val.second;
-        }
-    }
-}
+//         if (res.size() == 0 || res.at(res.size()-1).first != val.first){
+//             res.emplace_back(val);
+//         }
+//         else{
+//             res[res.size()-1].second += val.second;
+//         }
+//     }
+// }
 
 
 // std::vector<double> CSR_matrix::vectorMultiply(std::vector<double>& vec) {
